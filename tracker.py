@@ -16,23 +16,42 @@ def search_repos():
     url = f"https://api.github.com/search/repositories?q=nft+mint+created:>{time_filter}&sort=stars&order=desc"
     
     r = requests.get(url, headers=headers)
+    print("GitHub API Status:", r.status_code)
     return r.json()
 
 def send_telegram(text):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("ERROR: TELEGRAM_TOKEN or CHAT_ID is missing")
+        return
+    
     telegram_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    
     payload = {
         "chat_id": CHAT_ID,
         "text": text
     }
-    requests.post(telegram_url, json=payload)
+
+    r = requests.post(telegram_url, json=payload)
+    print("Telegram Status:", r.status_code)
+    print("Telegram Response:", r.text)
 
 def main():
+    print("Workflow started")
+    print("Token exists:", TELEGRAM_TOKEN is not None)
+    print("Chat ID:", CHAT_ID)
+
+    # TEST MESSAGE DULU
+    send_telegram("🚀 Workflow is running!")
+
     data = search_repos()
     
+    if "items" not in data:
+        print("No items found or API limit reached")
+        return
+
     for repo in data.get("items", []):
         if repo["stargazers_count"] > 5 and not repo["fork"]:
-            message = f"""
-🚀 NFT Repo Detected
+            message = f"""🚀 NFT Repo Detected
 
 Name: {repo['name']}
 Stars: {repo['stargazers_count']}
