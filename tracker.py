@@ -8,6 +8,7 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 KEYWORD = "free mint"
 
+
 def send_telegram(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         print("Telegram secret missing")
@@ -21,6 +22,13 @@ def search_rss(query):
     q = query.replace(" ", "+")
     url = f"https://nitter.net/search/rss?f=tweets&q={q}+lang:en"
     feed = feedparser.parse(url)
+
+    print("RSS STATUS:", feed.status if hasattr(feed, "status") else "NO STATUS")
+    print("TOTAL RSS RESULTS:", len(feed.entries))
+
+    for e in feed.entries[:5]:
+        print("RAW TITLE:", e.title)
+
     return feed.entries
 
 
@@ -31,7 +39,6 @@ def is_recent(entry):
     tweet_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
 
-    # 🔥 2 HARI = 48 JAM
     return (now - tweet_time) <= timedelta(days=2)
 
 
@@ -60,10 +67,6 @@ Link:
 
     if found == 0:
         send_telegram("❌ No free mint tweets found in last 2 days.")
-
-print("TOTAL RSS RESULTS:", len(results))
-for e in results[:5]:
-    print("RAW TITLE:", e.title)
 
 
 if __name__ == "__main__":
