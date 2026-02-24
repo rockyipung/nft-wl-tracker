@@ -3,7 +3,13 @@ name: NFT WL Tracker
 on:
   schedule:
     - cron: "*/15 * * * *"
+
   workflow_dispatch:
+    inputs:
+      keyword:
+        description: "Keyword untuk search (contoh: nft, erc721, whitelist)"
+        required: false
+        default: "nft"
 
 jobs:
   run-script:
@@ -25,4 +31,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          SEARCH_KEYWORD: ${{ github.event.inputs.keyword }}
         run: python tracker.py
