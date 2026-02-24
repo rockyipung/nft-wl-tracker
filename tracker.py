@@ -1,69 +1,74 @@
 import requests
 import os
-from datetime import datetime, timezone, timedelta
+import feedparser
+from datetime import datetime, timezone
 
-BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-SEARCH_URL = "https://api.twitter.com/2/tweets/search/recent"
-
-QUERY = """
-(whitelist OR "free mint" OR "mint live")
-(USA OR UK OR France OR Germany OR Europe)
-lang:en -is:retweet
-"""
+# 🔥 Keyword hunter regional
+KEYWORDS = [
+    "whitelist nft USA",
+    "free mint NFT UK",
+    "NFT mint Europe",
+    "NFT whitelist France",
+    "ERC721 mint Germany"
+]
 
 def send_telegram(text):
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("Telegram secret missing")
+        return
+
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     requests.post(url, json={"chat_id": CHAT_ID, "text": text})
 
-def search_x():
-    headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
-    
-    params = {
-        "query": QUERY,
-        "max_results": 10,
-        "tweet.fields": "created_at,author_id"
-    }
-    
-    response = requests.get(SEARCH_URL, headers=headers, params=params)
-    
-    if response.status_code != 200:
-        print(response.text)
-        return []
-    
-    return response.json().get("data", [])
 
-def is_recent(tweet_time):
-    tweet_time = datetime.fromisoformat(tweet_time.replace("Z","+00:00"))
+def search_rss(query):
+    q = query.replace(" ", "+")
+    url = f"https://nitter.net/search/rss?f=tweets&q={q}+lang:en"
+    feed = feedparser.parse(url)
+    return feed.entries
+
+
+def is_recent(entry):
+    if not hasattr(entry, "published_parsed"):
+        return False
+
+    tweet_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
-    return (now - tweet_time) <= timedelta(hours=2)
+
+    diff_minutes = (now - tweet_time).total_seconds() / 60
+
+    # 🔥 hanya tweet maksimal 2 jam
+    return diff_minutes <= 120
+
 
 def main():
-    send_telegram("🚀 HUNTER MODE API X STARTED")
+    send_telegram("🚀 RSS HUNTER US/EU STARTED")
 
-    tweets = search_x()
+    total_found = 0
 
-    found = 0
+    for keyword in KEYWORDS:
+        results = search_rss(keyword)
 
-    for tweet in tweets:
-        if is_recent(tweet["created_at"]):
-            link = f"https://x.com/i/web/status/{tweet['id']}"
-            
-            message = f"""🔥 NFT WL ALERT (API X)
+        for entry in results[:5]:
+            if is_recent(entry):
+                link = entry.link
+                text = entry.title
 
-Text:
-{tweet['text']}
+                message = f"""🔥 NFT WL ALERT
 
-Link:
-{link}
+Keyword: {keyword}
+Tweet: {text}
+Link: {link}
 """
-            send_telegram(message)
-            found += 1
+                send_telegram(message)
+                total_found += 1
 
-    if found == 0:
-        send_telegram("❌ No fresh US/EU NFT whitelist found.")
+    if total_found == 0:
+        send_telegram("❌ No fresh US/EU whitelist tweets found.")
+
 
 if __name__ == "__main__":
     main()
