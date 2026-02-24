@@ -61,6 +61,10 @@ Link:
     if found == 0:
         send_telegram("❌ No free mint tweets found in last 2 days.")
 
+print("TOTAL RSS RESULTS:", len(results))
+for e in results[:5]:
+    print("RAW TITLE:", e.title)
+
 
 if __name__ == "__main__":
     main()
