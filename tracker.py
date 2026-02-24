@@ -6,18 +6,16 @@ from datetime import datetime, timezone
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# 🔥 Keyword hunter regional
-KEYWORDS = [
-    "whitelist nft USA",
-    "free mint NFT UK",
-    "NFT mint Europe",
-    "NFT whitelist France",
-    "ERC721 mint Germany"
+# 🔥 Fokus utama
+BASE_KEYWORD = "free mint"
+
+REGIONS = [
+    "USA", "US", "New York", "California", "Texas", "EST", "PST",
+    "UK", "France", "Germany", "Spain", "Italy", "Europe", "CET", "GMT"
 ]
 
 def send_telegram(text):
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("Telegram secret missing")
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -38,36 +36,43 @@ def is_recent(entry):
     tweet_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
 
-    diff_minutes = (now - tweet_time).total_seconds() / 60
+    return (now - tweet_time).total_seconds() / 3600 <= 2
 
-    # 🔥 hanya tweet maksimal 2 jam
-    return diff_minutes <= 120
+
+def contains_region(text):
+    for region in REGIONS:
+        if region.lower() in text.lower():
+            return True
+    return False
 
 
 def main():
-    send_telegram("🚀 RSS HUNTER US/EU STARTED")
+    send_telegram("🚀 FREE MINT GLOBAL HUNTER STARTED")
 
-    total_found = 0
+    results = search_rss(BASE_KEYWORD)
 
-    for keyword in KEYWORDS:
-        results = search_rss(keyword)
+    found = 0
 
-        for entry in results[:5]:
-            if is_recent(entry):
-                link = entry.link
-                text = entry.title
+    for entry in results[:10]:
 
-                message = f"""🔥 NFT WL ALERT
+        if is_recent(entry) and contains_region(entry.title):
 
-Keyword: {keyword}
-Tweet: {text}
-Link: {link}
+            link = entry.link
+            text = entry.title
+
+            message = f"""🔥 FREE MINT ALERT
+
+Tweet:
+{text}
+
+Link:
+{link}
 """
-                send_telegram(message)
-                total_found += 1
+            send_telegram(message)
+            found += 1
 
-    if total_found == 0:
-        send_telegram("❌ No fresh US/EU whitelist tweets found.")
+    if found == 0:
+        send_telegram("❌ No free mint with region detected.")
 
 
 if __name__ == "__main__":
