@@ -1,19 +1,18 @@
 import requests
 import os
-from datetime import datetime, timedelta
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+SEARCH_KEYWORD = os.getenv("SEARCH_KEYWORD") or "nft"
 
 headers = {
     "Authorization": f"token {GITHUB_TOKEN}"
 }
 
 def search_repos():
-    time_filter = (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    
-    url = f"https://api.github.com/search/repositories?q=nft+mint+created:>{time_filter}&sort=stars&order=desc"
+    query = f"{SEARCH_KEYWORD} OR erc721 OR erc1155 whitelist mint"
+    url = f"https://api.github.com/search/repositories?q={query}+in:name,description,readme&sort=updated&order=desc&per_page=10"
     
     r = requests.get(url, headers=headers)
     print("GitHub API Status:", r.status_code)
@@ -37,27 +36,37 @@ def send_telegram(text):
 
 def main():
     print("Workflow started")
-    print("Token exists:", TELEGRAM_TOKEN is not None)
-    print("Chat ID:", CHAT_ID)
+    print("Searching for:", SEARCH_KEYWORD)
 
-    # TEST MESSAGE DULU
-    send_telegram("🚀 Workflow is running!")
+    send_telegram(f"🔎 Searching GitHub for: {SEARCH_KEYWORD}")
 
     data = search_repos()
     
     if "items" not in data:
         print("No items found or API limit reached")
+        send_telegram("⚠️ No results found or API limit reached.")
         return
 
+    count = 0
+
     for repo in data.get("items", []):
-        if repo["stargazers_count"] > 5 and not repo["fork"]:
+        if repo["stargazers_count"] > 3 and not repo["fork"]:
+            
             message = f"""🚀 NFT Repo Detected
 
 Name: {repo['name']}
 Stars: {repo['stargazers_count']}
+Updated: {repo['updated_at']}
 URL: {repo['html_url']}
 """
             send_telegram(message)
+            count += 1
+
+        if count >= 5:
+            break
+
+    if count == 0:
+        send_telegram("❌ No strong NFT repo found.")
 
 if __name__ == "__main__":
     main()
