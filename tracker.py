@@ -1,12 +1,11 @@
 import requests
 import os
 import feedparser
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# 🔥 Keyword utama
 KEYWORD = "free mint"
 
 def send_telegram(text):
@@ -32,18 +31,18 @@ def is_recent(entry):
     tweet_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
 
-    # 🔥 hanya tweet maksimal 2 jam
-    return (now - tweet_time).total_seconds() / 3600 <= 2
+    # 🔥 2 HARI = 48 JAM
+    return (now - tweet_time) <= timedelta(days=2)
 
 
 def main():
-    send_telegram("🚀 FREE MINT GLOBAL HUNTER STARTED")
+    send_telegram("🚀 FREE MINT GLOBAL HUNTER STARTED (<2 Days)")
 
     results = search_rss(KEYWORD)
 
     found = 0
 
-    for entry in results[:10]:
+    for entry in results[:20]:
 
         if is_recent(entry):
 
@@ -60,7 +59,7 @@ Link:
             found += 1
 
     if found == 0:
-        send_telegram("❌ No fresh free mint tweets found.")
+        send_telegram("❌ No free mint tweets found in last 2 days.")
 
 
 if __name__ == "__main__":
