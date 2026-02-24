@@ -1,22 +1,22 @@
-name: NFT WL Tracker
+name: NFT WL Hunter US/EU
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
-
+    - cron: "*/10 * * * *"   # jalan tiap 10 menit
   workflow_dispatch:
     inputs:
-      keyword:
-        description: "Keyword untuk search (contoh: nft, erc721, whitelist)"
+      extra_keyword:
+        description: "Tambahan keyword (optional)"
         required: false
-        default: "nft"
+        default: ""
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
       
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -26,10 +26,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       
-      - name: Run script
+      - name: Run Hunter Script
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-          SEARCH_KEYWORD: ${{ github.event.inputs.keyword }}
+          EXTRA_KEYWORD: ${{ github.event.inputs.extra_keyword }}
         run: python tracker.py
