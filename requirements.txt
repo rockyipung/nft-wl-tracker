@@ -1,2 +1,4 @@
+opencv-python
+pytesseract
 requests
-feedparser
+pytest
